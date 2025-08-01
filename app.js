@@ -15,10 +15,24 @@ const app = express();
 const port = process.env.PORT || 3000;
 
 // ✅ Configurar CORS para permitir cookies
+const allowedOrigins = [
+  'http://127.0.0.1:5500',   // Local (Live Server)
+  'http://localhost:5500',   // Otra variante local
+  'http://localhost:5173',   // Vite
+  'https://beebright.netlify.app' // Producción en Netlify
+];
+
 app.use(cors({
-  origin: ['https://beebright.netlify.app'], // Cambia por tu dominio de Netlify
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('CORS bloqueado: ' + origin));
+    }
+  },
   credentials: true
 }));
+
 
 app.use(bodyParser.json());
 app.use(cookieParser());
@@ -85,11 +99,14 @@ app.post('/api/login', async (req, res) => {
 
   const token = jwt.sign({ username }, process.env.JWT_SECRET || "secretkey", { expiresIn: '2h' });
 
+  const isProduction = process.env.NODE_ENV === 'production';
+
   res.cookie("token", token, {
     httpOnly: true,
-    secure: true, // ✅ Obligatorio en producción (HTTPS)
-    sameSite: 'None' // ✅ Necesario para cross-site cookies
+    secure: isProduction, // ✅ solo true en Render
+    sameSite: 'None'
   });
+
 
   res.json({ message: "Login exitoso" });
 });
